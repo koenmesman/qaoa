@@ -1,11 +1,12 @@
 import numpy as np
+import csv
 from math import pi
+from scipy.optimize import curve_fit
 from qiskit import (
   QuantumCircuit,
   execute,
   Aer)
 import time
-import networkx as nx
 import random
 from matplotlib import cm
 import matplotlib.pyplot as plt
@@ -61,7 +62,7 @@ def eval_cost(out_state):
     return c
 
 
-def find_exp(graph, out_state):
+def find_exp(out_state):
     #evaluate the expectation value
     prob = list(out_state.values())
     states = list(out_state.keys())
@@ -73,13 +74,20 @@ def find_exp(graph, out_state):
 
 def qaoa_inv(params):
     states = qaoa_circ(params)
-    best = max(states, key=states.get)
-    out = eval_cost(best)
+    #best = max(states, key=states.get)
+    #out = eval_cost(best)
+    out = find_exp(states)
     if out == 0:
         inv = 2
     else:
         inv = 1/out
     return inv
+
+
+def qaoa_norm(params):
+    states = qaoa_circ(params)
+    out = find_exp(graph, states)
+    return out
 
 
 # QAOA function
@@ -88,7 +96,7 @@ def qaoa_circ(params):
     v, edge_list = graph
 
     if beta < 0 or beta > (2*pi) or gamma < 0 or gamma > (2*pi):
-        return 10
+        return 0
     else:
         qc = QuantumCircuit(v, v)
         for qubit in range(v):
@@ -129,44 +137,86 @@ def qaoa_landscape(g, n):
     return
 
 
+def line(x, a, b):
+    return a * x + b
+
+
+def switch_opt(x, init_param):
+    return {
+        'nm': minimize(qaoa_inv, init_param, method='nelder-mead',
+                              options={'ftol': 1e-2, 'maxfev': 400, 'disp': False}),
+        'BFGS': minimize(qaoa_inv, init_param, method='BFGS',
+                              options={'disp': False}),
+        'Newton-CG': minimize(qaoa_inv, init_param, method='Newton-CG',
+                              options={'disp': False}),
+    }[x]
+
+
+def QAOA_opt(opt_method):
+    d_time = []
+    data_points = []
+    data_x = []
+
+    problem_range = range(3, max_size)
+
+    for problem_size in problem_range:  # loop over problem size
+        vertice_list = list(range(0, problem_size, 1))
+        # generate a (pseudo) random graph
+        graph = generate_graph(problem_size, ratio)
+        edge_list = graph[1]
+
+        for d in range(data_shots):  # loop over data points per problem size
+            init_param = [pi, pi]
+            start = time.time()
+
+
+
+            result = minimize(qaoa_inv, init_param, method='nelder-mead',
+                              options={'ftol': 1e-2, 'maxfev': 400, 'disp': False})
+
+
+
+            d_time.append(time.time() - start)
+            print("now finished size ", problem_size, " number ", d)
+            data_x.append(problem_size)
+    return [data_x, d_time]
+
 ######################################################################################
-nr_nodes = 3
 ratio = 1
 p = 1
 qaoa_shots = 10000
+data_shots = 5
+max_size = 15
 
-vertice_list = list(range(0, nr_nodes, 1))
-
-#generate a (pseudo) random graph
-graph = generate_graph(nr_nodes, ratio)
-edge_list = graph[1]
-
-G = nx.Graph()
-G.add_nodes_from(vertice_list)
-G.add_edges_from(edge_list)
+#G = nx.Graph()
+#G.add_nodes_from(vertice_list)
+#G.add_edges_from(edge_list)
 
 # Generate plot of the Graph
-colors = ['r' for node in G.nodes()]
-default_axes = plt.axes(frameon=True)
-pos = nx.spring_layout(G)
-nx.draw_networkx(G, node_color=colors, node_size=600, alpha=1, ax=default_axes, pos=pos)
+#colors = ['r' for node in G.nodes()]
+#default_axes = plt.axes(frameon=True)
+#pos = nx.spring_layout(G)
+#nx.draw_networkx(G, node_color=colors, node_size=600, alpha=1, ax=default_axes, pos=pos)
 
 #############################################################
 #qaoa_landscape(graph, 40)  # nr_nodes, edge list, resolution
 
 
-init_param = [pi, pi]
-cuts = minimize(qaoa_inv, init_param, method='nelder-mead',
-               options={'xatol': 1e-4, 'disp': True}).fun
+    # data_points.append(d_time)
+#plt.scatter(data_x, d_time)
+#popt, _ = curve_fit(line, data_x, d_time)
+#xfine = np.linspace(0., max_size, 100)
+#plt.plot(xfine, line(xfine, popt[0], popt[1]), 'r-')
+#plt.show()
+np.savetxt('nm_data.dat', [data_x, d_time])
 
-print("cuts = ", 1/cuts)
-G.clear()
+
+#np.savetxt('BFGS_data.dat', [data_x, d_time])
+
+#G.clear()
 
 
 # TODO
-#   fix qaoa func
-#       find best expectation value
-#       evaluate expectation?
 #   try different optimizers
 #   readout success rate and runtime
 #       finding maximum success rate/accuracy
