@@ -2,14 +2,13 @@
 # Koen Mesman, TU Delft, 2021                                           #
 # This file generates different problem sets for benchmarking purposes  #
 #########################################################################
-#TODO: add weighted option to graphs
-
 import time
 import random
 import os
 import numpy as np
 
 
+# returns a graph with a set edge to vertices ratio
 def set_density(n, r):
     edges = []
     nr_edges = int(round(n*r))
@@ -23,6 +22,7 @@ def set_density(n, r):
     return edges
 
 
+# return a problem graph with a set edge to vertices ratio, and ensures that all nodes are included
 def include_all(n, r):
     edges = []
     nr_edges = int(round(n*r))
@@ -76,7 +76,7 @@ def regular_graph(n):
     return edges
 
 
-# return a fully connected graph (set_probability p=1)
+# return a fully connected graph (set_probability p=1) if weighted == True, give each edge a weight [1, 10]
 def fully_connected(n):
     edges = []
     for i in range(n):
@@ -105,6 +105,19 @@ def create_dir(new_dir):
         print("Successfully created the directory %s " % path)
 
 
+# transforms the graph to a weighted graph with edge value inf for disconnected vertices
+def to_tsp(edge_list):
+    n = max(edge_list, key=lambda x: x[1])[1]+1
+    full_list = fully_connected(n)
+    for i in range(len(full_list)):
+        if full_list[i] not in edge_list:
+            full_list[i].append(np.inf)
+        else:
+            full_list[i].append(random.randrange(1, 10, 1))
+    return full_list
+
+
+# generate a file with size 5 to n vertices with selected method
 def generate_problem(method, n, *arg):
 
     create_dir("/"+method.__name__)
@@ -127,4 +140,6 @@ def generate_problem(method, n, *arg):
     return edges
 
 
-generate_problem(regular_graph, 8)
+# examples:
+graph = generate_problem(regular_graph, 6)
+tsp_graph = to_tsp(graph)
