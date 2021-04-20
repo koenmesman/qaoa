@@ -98,8 +98,6 @@ def max_cut_circ(params, graph, p):
     states = list(out_state.keys())
     exp = 0
     for k in range(len(states)):
-        print(states[k])
-        print(eval_cost(states[k], graph))
         exp += eval_cost(states[k], graph)*prob[k]
     return exp/qaoa_shots
 
