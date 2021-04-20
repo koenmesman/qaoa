@@ -1,3 +1,8 @@
+#########################################################################
+# QPack                                                                 #
+# Koen Mesman, TU Delft, 2021                                           #
+# This file defines the QAOA circuit implementations and cost functions.#
+#########################################################################
 from math import pi, acos
 from qiskit import (
   QuantumCircuit,
@@ -30,9 +35,9 @@ def eval_cost(out_state, graph):
     edges = graph[1]
     c = 0
     bin_len = "{0:0" + str(v) + "b}"  # string required for binary formatting
-    bin_val = list(bin_len.format(list(out_state).index(max(out_state))))
-    bin_val = [int(i) for i in bin_val]
+    bin_val = [int(i) for i in list(out_state)]
     bin_val = [-1 if x == 0 else 1 for x in bin_val]
+
     for e in edges:
         c += 0.5 * (1 - int(bin_val[e[0]]) * int(bin_val[e[1]]))
     return c
@@ -67,7 +72,7 @@ def cost_tsp(params, graph, p, rep):
 
 
 # QAOA function
-def max_cut_circ(params, graph, p, rep):
+def max_cut_circ(params, graph, p):
     beta, gamma = params
     v, edge_list = graph
     vertice_list = list(range(0, v, 1))
@@ -93,8 +98,10 @@ def max_cut_circ(params, graph, p, rep):
     states = list(out_state.keys())
     exp = 0
     for k in range(len(states)):
-        exp += eval_cost(states[k], graph)*prob[k]/rep
-    return exp
+        print(states[k])
+        print(eval_cost(states[k], graph))
+        exp += eval_cost(states[k], graph)*prob[k]
+    return exp/qaoa_shots
 
 
 def tsp_circ(params, graph, p, rep):
@@ -136,7 +143,7 @@ def tsp_circ(params, graph, p, rep):
 
         qc.measure(range(n), range(n))
         #qc.draw(output='mpl', filename='my_circuit.png')
-        simulator = QasmSimulator(configuration='extended_stabilizer')
+        simulator = QasmSimulator(configuration='automatic')
         result = execute(qc, simulator, shots=rep).result()
         #out_state = result.get_counts()
         out_state = result.get_counts()
