@@ -1,3 +1,8 @@
+#########################################################################
+# QPack                                                                 #
+# Koen Mesman, TU Delft, 2021                                           #
+# This file runs the QAOA instance and writes the output data           #
+#########################################################################
 from math import pi, acos, sqrt
 import time
 import random
@@ -16,6 +21,7 @@ import random
 from matplotlib import cm
 import matplotlib.pyplot as plt
 from qiskit.quantum_info import Operator
+import Problem_set as ps
 
 plt.interactive(True)
 #backend = Aer.get_backend('qasm_simulator')
@@ -26,7 +32,6 @@ import nlopt
 import numpy as np
 import qiskit.converters.circuit_to_gate
 from numpy import *
-from Classic_opt import shgo_fun
 
 
 plt.interactive(True)
@@ -42,20 +47,27 @@ from qiskit import (
   Aer)
 backend = Aer.get_backend('qasm_simulator')
 
+qaoa_shots = 10000
 
 
 def write_data(save_data, data_name):
-    data_path = 'Test_data/' + data_name + 'timing_data.dat'
+    data_path = 'Test_data/' + data_name + '_' + str(qaoa_shots) + '_timing_data.dat'
+
+    #t_data = np.loadtxt('Test_data/empty_file.dat')
+    t_data = [[], []]
     try:
         load_data = np.loadtxt(data_path)
         save_data = np.array(save_data)
-        print(save_data)
-        data = np.hstack((load_data, save_data))
+        t_data = np.hstack((load_data, save_data))
+
+
     except IOError:
-        data =  np.array(save_data)
-    finally:
-        np.savetxt(data_path, data)
-        print("data saved for " + data_name)
+        t_data = np.array(save_data)
+        #print('data after IOERROR')
+        #np.savetxt(data_path, 0)
+
+    np.savetxt(data_path, t_data)
+    print("data saved for " + data_name)
 
 
 def run_qaoa(q_app, opt_func, graph, p):
@@ -76,15 +88,23 @@ def data_test(q_app, problem_range, data_shots, opt_func, p):
         }.get(q_app)
 
         for d in range(data_shots):  # loop over data points per problem size, time optimizer
+            print('start run ', d, 'for ', q_app)
             start = time.time()
-            run_qaoa(q_app, opt_func, graph, p)
-
+            [result, res_param] = run_qaoa(q_app, opt_func, graph, p)
             d_time.append(time.time() - start)
+            print(result)
             print("now finished size ", problem_size, " number ", d)
             data_x.append(problem_size)
-            data = [data_x, d_time]
-            write_data(data, q_app)
 
-#data_test('tsp', range(3, 6), 20, shgo_fun, 1)
-data_test('dsp', range(11, 12), 3, shgo_fun, 1)
+            new_data = [data_x, d_time]
+        write_data(new_data, q_app)
 
+#data_test('dsp', range(10, 15), 50, shgo_fun, 1)
+#data_test('max-cut', range(20, 23), 30, shgo_fun, 1)
+#data_test('tsp', range(5, 6), 10, shgo_fun, 1)
+#data_test('dsp', range(22, 25), 1, shgo_fun, 1)
+#data_test('max-cut', range(15, 25), 40, shgo_fun, 1)
+n=6
+graph = [n, ps.regular_graph(n)]
+result = run_qaoa('max-cut', co.nm, graph, 1)
+print(result)
